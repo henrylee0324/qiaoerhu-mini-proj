@@ -1,0 +1,17 @@
+quirements : Your project should include the following:
+● Develop a digital business idea that creates value primarily through digital technologies.
+● Design a business model using key elements from both the Value Proposition Canvas and the Business Model Canvas.
+● Use AI to refine and strengthen your business concept, including market positioning, customer value proposition, and business strategy.
+● Use AI to improve your presentation materials, including content organization, visual design, graphics, and storytelling.
+● Use AI to create mockups or prototypes of your business, such as user interfaces, websites, mobile apps, product concepts, marketing
+materials, or customer journeys.
+Students are encouraged to experiment with multiple AI tools and demonstrate how AI contributed to the development of their project. Be reminded that
+AI is a tool for enhancing your work—not replacing your own judgment.
+Evaluation Criteria : Projects will be evaluated based on:
+● Innovation and originality of the business idea
+● Completeness and coherence of the business model
+● Effective integration of digital technologies
+● Quality of AI-assisted ideation, refinement, and prototyping
+● Professionalism and clarity of the presentation
+● Evidence of genuine effort and critical thinking, rather than relying solely on AI-generated content
+Due : In class 10-min presentation on November 4.
