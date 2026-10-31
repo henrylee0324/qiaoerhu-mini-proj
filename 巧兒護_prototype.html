@@ -1,0 +1,578 @@
+<title>巧兒護派單原型</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700&family=Noto+Sans+TC:wght@400;500;700&family=DM+Sans:wght@500;700&display=swap">
+<style>
+  /* Layout: a stage. Parent phone on the left, nanny phone on the right, the dispatch engine's event stream between them. Fixed light theme for projectors. */
+  :root {
+    --bg: #eef2f0;
+    --bg-2: #e3e9e6;
+    --card: #ffffff;
+    --fg: #16302b;
+    --muted: #5d706b;
+    --line: #d4ddd9;
+    --brand: #1d5c52;
+    --brand-ink: #ffffff;
+    --accent: #e8643c;
+    --accent-soft: #fdebe3;
+    --good: #2f8f5b;
+    --good-soft: #e3f3ea;
+    --warn: #c98a12;
+    --warn-soft: #fff4d6;
+    --phone: #0f1f1c;
+    --screen: #f7f9f8;
+    --display: "Noto Serif TC", "PingFang TC", "Microsoft JhengHei", serif;
+    --body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+    --num: "DM Sans", "Noto Sans TC", system-ui, sans-serif;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.5; overflow: hidden; }
+  button { font: inherit; cursor: pointer; }
+  button:focus-visible, textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .num { font-family: var(--num); font-variant-numeric: tabular-nums; }
+
+  /* top bar */
+  .bar { height: 60px; display: flex; align-items: center; gap: 14px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); background: var(--card); border-bottom: 1px solid var(--line); }
+  .logo { display: flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: 700; font-size: 19px; }
+  .logo svg { width: 26px; height: 26px; }
+  .bar .sub { color: var(--muted); font-size: 13px; }
+  .bar .spacer { flex: 1; }
+  .ctrl { display: flex; align-items: center; gap: 8px; }
+  .btn { padding: 7px 14px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--card); color: var(--fg); font-weight: 700; font-size: 13px; }
+  .btn.primary { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
+  .btn.accent { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn[disabled] { opacity: .4; cursor: default; }
+  .btn kbd { font-family: var(--num); font-size: 11px; opacity: .7; margin-left: 4px; }
+  .switch { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); user-select: none; cursor: pointer; }
+  .switch input { appearance: none; width: 36px; height: 20px; border-radius: 999px; background: var(--line); position: relative; margin: 0; cursor: pointer; }
+  .switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left .15s; }
+  .switch input:checked { background: var(--warn); }
+  .switch input:checked::after { left: 18px; }
+  .badge { font-family: var(--num); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; background: var(--warn-soft); color: var(--warn); font-weight: 700; }
+
+  /* stage */
+  .stage { height: calc(100% - 60px); display: grid; grid-template-columns: 390px minmax(260px, 420px) 390px; gap: 28px; justify-content: center; align-items: start; padding: 22px max(16px, env(safe-area-inset-left, 0px)) 16px; overflow: auto; }
+  .col-title { display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 8px; font-size: 13px; color: var(--muted); }
+  .col-title b { color: var(--fg); font-size: 15px; }
+
+  /* phone */
+  .phone { background: var(--phone); border-radius: 38px; padding: 11px; box-shadow: 0 30px 60px -30px rgba(0,0,0,.45); }
+  .screen { background: var(--screen); border-radius: 28px; height: min(720px, calc(100vh - 150px)); min-height: 520px; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+  .status { display: flex; justify-content: space-between; padding: 12px 20px 0; font-family: var(--num); font-size: 12px; color: var(--muted); }
+  .status b { color: var(--fg); }
+  .app-head { padding: 10px 18px 8px; display: flex; justify-content: space-between; align-items: center; }
+  .app-head h2 { margin: 0; font-size: 18px; font-family: var(--display); }
+  .chip { font-size: 11px; padding: 2px 9px; border-radius: 999px; font-weight: 700; font-family: var(--num); background: var(--accent-soft); color: var(--accent); }
+  .chip.good { background: var(--good-soft); color: var(--good); }
+  .chip.warn { background: var(--warn-soft); color: var(--warn); }
+  .chip.brand { background: var(--brand); color: var(--brand-ink); }
+  .body { padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; flex: 1; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; }
+  .card.hot { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .card.good { border-color: var(--good); }
+  .card h3 { margin: 0 0 6px; font-size: 14px; font-weight: 700; }
+  .card .k { font-size: 11px; color: var(--muted); }
+  .label { font-size: 11px; color: var(--muted); margin-bottom: 4px; display: block; }
+  textarea { width: 100%; border: 0; background: transparent; resize: none; font: inherit; font-size: 15px; line-height: 1.5; color: var(--fg); padding: 0; height: 74px; }
+  .samples { display: flex; flex-wrap: wrap; gap: 6px; }
+  .samples button { font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--muted); }
+  .samples button:hover { color: var(--fg); border-color: var(--fg); }
+  .big { width: 100%; padding: 13px; border-radius: 14px; border: 0; font-weight: 700; font-size: 15px; }
+  .big.brand { background: var(--brand); color: var(--brand-ink); }
+  .big.accent { background: var(--accent); color: #fff; }
+  .big.ghost { background: transparent; border: 1.5px solid var(--line); color: var(--muted); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .grid2 div { background: var(--bg-2); border-radius: 10px; padding: 7px 10px; font-size: 13px; min-width: 0; }
+  .grid2 div span { display: block; font-size: 10px; color: var(--muted); }
+  .grid2 div.ai { outline: 1.5px dashed var(--brand); outline-offset: -1.5px; }
+  .hint { font-size: 12px; color: var(--muted); }
+  .hint b { color: var(--brand); }
+
+  .cand { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
+  .cand:first-of-type { border-top: 0; }
+  .cand.top { background: var(--good-soft); margin: 0 -14px; padding: 8px 14px; border-radius: 10px; border-top: 0; }
+  .av { width: 34px; height: 34px; border-radius: 50%; background: var(--brand); color: var(--brand-ink); display: grid; place-items: center; font-weight: 700; font-family: var(--num); font-size: 13px; flex: none; }
+  .av.lg { width: 44px; height: 44px; font-size: 16px; }
+  .av.xl { width: 56px; height: 56px; font-size: 20px; }
+  .cand b { display: block; font-size: 14px; line-height: 1.2; }
+  .cand small { color: var(--muted); font-size: 11px; }
+  .cand .sc { text-align: right; font-family: var(--num); font-weight: 700; font-size: 18px; color: var(--good); line-height: 1; }
+  .cand .sc span { display: block; font-size: 10px; color: var(--muted); font-weight: 500; }
+  .reasons { display: flex; flex-wrap: wrap; gap: 5px; }
+  .reasons span { font-size: 11px; padding: 2px 8px; border-radius: 6px; background: var(--bg-2); }
+  .reasons span.ok { background: var(--good-soft); color: var(--good); }
+  .who { display: flex; gap: 10px; align-items: center; }
+  .who b { display: block; font-size: 15px; line-height: 1.2; }
+  .who span { font-size: 12px; color: var(--muted); }
+  .score { margin-left: auto; text-align: right; }
+  .score b { font-family: var(--num); font-size: 26px; color: var(--good); line-height: 1; display: block; }
+  .score span { font-size: 10px; color: var(--muted); }
+  .meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+  .meta b { color: var(--fg); font-family: var(--num); }
+  .cd { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; color: var(--muted); padding: 0 4px; }
+  .cd b { font-family: var(--num); font-size: 24px; color: var(--fg); }
+  .cd.alarm b { color: var(--accent); }
+  .steps { display: flex; flex-direction: column; gap: 6px; }
+  .st { display: grid; grid-template-columns: 20px 1fr; gap: 8px; font-size: 13px; color: var(--muted); align-items: center; }
+  .st i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line); font-style: normal; }
+  .st.on { color: var(--fg); }
+  .st.on i { background: var(--good); border-color: var(--good); }
+  .st.live i { background: var(--accent); border-color: var(--accent); animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(232,100,60,.5)} 100%{box-shadow:0 0 0 9px transparent} }
+
+  /* shift grid (nanny) */
+  .shift { display: grid; grid-template-columns: 44px repeat(5, 1fr); gap: 5px; font-size: 11px; text-align: center; }
+  .shift span { color: var(--muted); font-family: var(--num); }
+  .shift i { display: block; height: 24px; border-radius: 6px; background: var(--bg-2); font-style: normal; }
+  .shift i.on { background: var(--brand); }
+  .shift i.now { background: var(--accent); }
+  .bars { display: grid; gap: 7px; }
+  .bars div { display: grid; grid-template-columns: 1fr auto; gap: 4px; font-size: 12px; }
+  .bars div span { color: var(--muted); }
+  .bars div em { font-style: normal; font-family: var(--num); font-weight: 700; }
+  .bars div em.up { color: var(--good); }
+  .bars div i { grid-column: 1 / -1; height: 5px; border-radius: 3px; background: var(--bg-2); overflow: hidden; display: block; }
+  .bars div i::after { content: ""; display: block; height: 100%; width: var(--w); background: var(--good); border-radius: 3px; transition: width .6s ease; }
+  .ring { width: 64px; height: 64px; position: relative; flex: none; }
+  .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring circle.v { transition: stroke-dasharray .8s ease; }
+  .ring b { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--num); font-size: 20px; }
+  .ring b small { font-size: 10px; color: var(--good); margin-left: 2px; }
+
+  /* push card */
+  .push { border: 2px solid var(--accent); border-radius: 18px; padding: 12px 14px; background: var(--card); box-shadow: 0 16px 40px -20px rgba(232,100,60,.6); animation: pop .35s ease; }
+  @keyframes pop { from { transform: translateY(-12px); opacity: 0 } to { transform: none; opacity: 1 } }
+  .push .t { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .push .t b { font-size: 15px; }
+  .push .fee { font-family: var(--num); font-size: 22px; font-weight: 700; }
+  .push .fee small { font-size: 11px; color: var(--muted); font-weight: 500; }
+  .push .acc { font-size: 11px; color: var(--muted); margin-top: 8px; display: flex; justify-content: space-between; }
+
+  /* live */
+  .live { border-radius: 14px; overflow: hidden; position: relative; aspect-ratio: 4 / 3; max-width: 100%; background: linear-gradient(180deg, #d9e8e2, #b9d1c8); }
+  .live svg { width: 100%; height: 100%; display: block; }
+  .live .tag { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,.6); color: #fff; font-family: var(--num); font-size: 11px; padding: 2px 8px; border-radius: 6px; display: flex; gap: 6px; align-items: center; }
+  .live .tag i { width: 7px; height: 7px; border-radius: 50%; background: #ff4b4b; animation: pulse 1s infinite; }
+  .toggle { display: flex; justify-content: space-between; align-items: center; }
+  .toggle .sw { width: 42px; height: 24px; border-radius: 999px; background: var(--good); position: relative; }
+  .toggle .sw::after { content: ""; position: absolute; top: 3px; right: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; }
+  .stars { display: flex; gap: 4px; }
+  .stars button { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--line); font-size: 20px; line-height: 1; }
+  .stars button.on { color: var(--warn); border-color: var(--warn); background: var(--warn-soft); }
+  .ledger { display: grid; gap: 4px; font-size: 13px; }
+  .ledger div { display: flex; justify-content: space-between; }
+  .ledger div b { font-family: var(--num); }
+  .ledger div.tot { border-top: 1px solid var(--line); padding-top: 4px; font-weight: 700; }
+  .done { text-align: center; padding: 16px 0 6px; }
+  .done .ck { width: 56px; height: 56px; border-radius: 50%; background: var(--good-soft); color: var(--good); display: grid; place-items: center; margin: 0 auto 10px; font-size: 26px; font-weight: 700; }
+
+  /* engine column */
+  .engine { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 14px 16px; height: min(742px, calc(100vh - 128px)); min-height: 540px; display: flex; flex-direction: column; gap: 10px; }
+  .engine h2 { margin: 0; font-size: 15px; font-family: var(--display); display: flex; justify-content: space-between; align-items: baseline; }
+  .engine h2 span { font-family: var(--num); font-size: 12px; color: var(--muted); font-weight: 500; }
+  .progress { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .progress i { height: 5px; border-radius: 3px; background: var(--bg-2); display: block; }
+  .progress i.on { background: var(--brand); }
+  .progress i.cur { background: var(--accent); }
+  .stepname { font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; }
+  .stepname b { color: var(--fg); }
+  .events { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
+  .ev { display: grid; grid-template-columns: 44px 1fr; gap: 8px; font-size: 13px; padding: 8px 10px; border-radius: 12px; background: var(--bg); border: 1px solid transparent; }
+  .ev time { font-family: var(--num); font-size: 12px; color: var(--muted); padding-top: 2px; }
+  .ev.cur { border-color: var(--accent); background: var(--accent-soft); }
+  .ev.sys { background: var(--good-soft); }
+  .ev p { margin: 0; }
+  .ev small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+  .ev code { font-family: var(--num); font-size: 12px; background: rgba(0,0,0,.05); padding: 0 4px; border-radius: 4px; }
+  .keys { font-size: 11.5px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 8px; display: flex; gap: 12px; flex-wrap: wrap; }
+  .keys kbd { font-family: var(--num); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; background: var(--card); }
+
+  @media (max-width: 1240px) { .stage { grid-template-columns: 390px minmax(220px, 300px) 390px; gap: 16px; } }
+  @media (max-width: 1060px) { .stage { grid-template-columns: 1fr; justify-items: center; overflow-y: auto; } .engine { width: 100%; max-width: 390px; height: auto; min-height: 0; } body { overflow: auto; } .col { width: 100%; max-width: 390px; } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<header class="bar">
+  <div class="logo">
+    <svg viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="14" fill="var(--brand)"/><path d="M15 6v9l5 4" stroke="var(--brand-ink)" stroke-width="2.6" stroke-linecap="round" fill="none"/><circle cx="15" cy="15" r="2" fill="var(--accent)"/></svg>
+    巧兒護
+  </div>
+  <span class="sub">臨托即時派單原型 · 家長端與保母端</span>
+  <span class="badge">示範資料</span>
+  <span class="spacer"></span>
+  <div class="ctrl">
+    <label class="switch" title="開啟後，推播階段會模擬 30 分鐘無人接單，再擴大範圍重推"><input type="checkbox" id="noone"> 模擬無人接單</label>
+    <button class="btn" id="prev">上一步<kbd>←</kbd></button>
+    <button class="btn primary" id="next">下一步<kbd>Space</kbd></button>
+    <button class="btn" id="auto">自動播放</button>
+    <button class="btn" id="reset">重置<kbd>R</kbd></button>
+  </div>
+</header>
+
+<main class="stage">
+  <div class="col">
+    <div class="col-title"><b>家長端</b><span>小潔 · 急托保障會員</span></div>
+    <div class="phone"><div class="screen" id="parent"></div></div>
+  </div>
+
+  <div class="engine">
+    <h2>派單引擎 <span id="eng-time">07:02</span></h2>
+    <div class="progress" id="progress"></div>
+    <div class="stepname"><span>步驟 <b class="num" id="stepno">0 / 7</b></span><b id="stepname">等待需求</b></div>
+    <div class="events" id="events"></div>
+    <div class="keys"><span><kbd>Space</kbd> / <kbd>→</kbd> 下一步</span><span><kbd>←</kbd> 上一步</span><span><kbd>R</kbd> 重置</span></div>
+  </div>
+
+  <div class="col">
+    <div class="col-title"><b>保母端</b><span>林雅婷 · 保母技術士</span></div>
+    <div class="phone"><div class="screen" id="nanny"></div></div>
+  </div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var parentEl = $('parent'), nannyEl = $('nanny'), eventsEl = $('events');
+
+  // ---------- demo data ----------
+  var SAMPLES = [
+    '小孩 2 歲發燒 38.5，8 點要人到大安區，要會換尿布',
+    '4 歲腸胃炎在家休息，今天 9 點到下午 1 點，會餵藥優先',
+    '雙胞胎 3 歲，臨時要出差，明天 7:30 到 12:00，信義路四段'
+  ];
+  var CHILD = { name: '小安', age: '2 歲 3 個月', weight: '12 kg', allergy: '無', med: '退燒藥水（依醫囑 6 小時一次）', sleep: '午睡要抱小被子', rule: '不看螢幕' };
+  var CANDS = [
+    { n: '林雅婷', i: '林', score: 92, km: 0.9, eta: 23, tags: ['證照已驗證', '12 次全準時', '曾服務你家 2 次'], top: true },
+    { n: '陳怡君', i: '陳', score: 88, km: 1.4, eta: 28, tags: ['證照已驗證', '2 歲經驗 30 次'] },
+    { n: '黃書涵', i: '黃', score: 85, km: 2.1, eta: 35, tags: ['幼教系四年級', '透明托育 100%'] },
+    { n: '王若瑜', i: '王', score: 81, km: 1.8, eta: 31, tags: ['證照已驗證', '新加入 2 個月'] },
+    { n: '張筱琪', i: '張', score: 79, km: 2.6, eta: 40, tags: ['幼教系三年級'] }
+  ];
+  var FEE = { base: 1400, urgentPct: 20, bonus: 100 };
+
+  // ---------- text -> structured (rule based, stands in for the LLM) ----------
+  function parse(text) {
+    var age = (text.match(/(\d+)\s*歲/) || [])[1] || '2';
+    var tomorrow = /明天/.test(text);
+    // only "H:MM" or "H 點" count as times; "2 歲" and "38.5" must not
+    var times = [], re = /(下午)?\s*(\d{1,2}):(\d{2})|(下午)?\s*(\d{1,2})\s*點/g, mm;
+    while ((mm = re.exec(text))) {
+      var pm = !!(mm[1] || mm[4]), h = parseInt(mm[2] || mm[5], 10), mi = mm[3] || '00';
+      if (pm && h < 12) h += 12;
+      times.push(h + ':' + mi);
+    }
+    var start = times[0] || '8:00';
+    var end = times[1] || null;
+    var place = (text.match(/(大安區|信義路四段|和平東路|復興南路|敦化南路|中正區)/) || [])[1] || '大安區';
+    var skills = [];
+    if (/尿布/.test(text)) skills.push('換尿布');
+    if (/餵藥/.test(text)) skills.push('餵藥');
+    if (/雙胞胎/.test(text)) skills.push('同時照顧兩位');
+    if (/副食品|餵食/.test(text)) skills.push('副食品');
+    if (!skills.length) skills.push('一般照護');
+    var cond = /發燒/.test(text) ? '發燒 ' + ((text.match(/(\d{2}(?:\.\d)?)\s*度?/) || [])[1] || '38.5') : /腸胃炎/.test(text) ? '腸胃炎' : /出差|不在家/.test(text) ? '家長不在家' : '無';
+    return [
+      ['時間', (tomorrow ? '明天 ' : '今天 ') + start + (end ? ' 到 ' + end : ' 起，約 3.5 小時')],
+      ['地點', place + '（門牌已預存）'],
+      ['孩子', age + ' 歲' + (/雙胞胎/.test(text) ? ' ×2' : '') + '，' + CHILD.name],
+      ['需要技能', skills.join('、')],
+      ['狀況', cond],
+      ['單別', '加急單（2 小時內到）']
+    ];
+  }
+
+  // ---------- state ----------
+  var FLOW = ['idle', 'parsed', 'pushed', 'accepted', 'service', 'review', 'done'];
+  var FLOW_NOONE = ['idle', 'parsed', 'pushed', 'expanded', 'accepted', 'service', 'review', 'done'];
+  var NAMES = { idle: '等待需求', parsed: 'AI 整理需求', pushed: '排序並推播', expanded: '擴大範圍重推', accepted: '保母接單', service: '服務中', review: '家長評價', done: '分數回寫' };
+  var S = { step: 0, text: SAMPLES[0], parsed: null, stars: 5, noone: false, auto: null };
+  var cdTimer = null;
+
+  function flow() { return S.noone ? FLOW_NOONE : FLOW; }
+  function state() { return flow()[S.step]; }
+  function at(name) { return flow().indexOf(name) <= S.step && flow().indexOf(name) >= 0; }
+  function expanded() { return S.noone && at('expanded'); }
+  function timeOf(name) {
+    var t = { idle: '07:02', parsed: '07:05', pushed: '07:05', expanded: '07:35', accepted: expanded() ? '07:39' : '07:09', service: expanded() ? '08:02' : '07:35', review: '11:05', done: '11:06' };
+    return t[name];
+  }
+  function urgentFee() { return Math.round(FEE.base * (1 + FEE.urgentPct / 100)); }
+
+  // ---------- render: parent ----------
+  function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+  function status(container, time, right) {
+    container.appendChild(el('div', 'status', '<b>' + time + '</b><span>' + right + '</span>'));
+  }
+  function head(container, title, chip) {
+    container.appendChild(el('div', 'app-head', '<h2>' + title + '</h2>' + (chip || '')));
+  }
+  function parsedGrid(ai) {
+    return '<div class="grid2">' + S.parsed.map(function (p) { return '<div class="' + (ai ? 'ai' : '') + '"><span>' + p[0] + '</span>' + p[1] + '</div>'; }).join('') + '</div>';
+  }
+  function candRow(c, hide) {
+    return '<div class="cand' + (c.top ? ' top' : '') + '"><span class="av">' + c.i + '</span><div><b>' + c.n + '</b><small class="num">' + c.km + ' km · 預估 ' + c.eta + ' 分' + (c.top ? '</small><div class="reasons">' + c.tags.map(function (t) { return '<span class="ok">' + t + '</span>'; }).join('') + '</div>' : ' · ' + c.tags.join('、') + '</small>') + '</div><div class="sc">' + c.score + '<span>信任</span></div></div>';
+  }
+  function matchCard() {
+    var c = CANDS[0];
+    return '<div class="card good"><div class="who"><span class="av lg">' + c.i + '</span><div><b>' + c.n + '</b><span>保母技術士 · 幼教系四年級</span></div><div class="score"><b class="num">' + c.score + '</b><span>信任分數</span></div></div>' +
+      '<div class="reasons" style="margin-top:8px">' + c.tags.map(function (t) { return '<span class="ok">' + t + '</span>'; }).join('') + '<span>透明托育 100%</span></div>' +
+      '<div class="meta" style="margin-top:8px"><span>預估到達 <b>' + (expanded() ? '07:39 接單 · 08:02 到' : '07:32') + '</b></span><span>加急單 <b>' + urgentFee().toLocaleString() + ' 元</b></span></div></div>';
+  }
+  function liveScene() {
+    return '<div class="live"><span class="tag"><i></i>LIVE 07:41</span><svg viewBox="0 0 400 300" aria-hidden="true"><rect x="0" y="210" width="400" height="90" fill="#9fbcb1"/><rect x="60" y="150" width="280" height="110" rx="18" fill="#f3efe6"/><rect x="80" y="135" width="240" height="40" rx="12" fill="#e4dccb"/><ellipse cx="130" cy="165" rx="26" ry="24" fill="#f1c9a8"/><path d="M106 160 q24 -36 48 0" fill="#3b2a21"/><rect x="150" y="150" width="150" height="46" rx="20" fill="#cfe0f2"/><circle cx="118" cy="168" r="2" fill="#3b2a21"/><circle cx="140" cy="168" r="2" fill="#3b2a21"/><path d="M122 178 q8 5 16 0" stroke="#b56a4a" stroke-width="2" fill="none"/><rect x="300" y="60" width="70" height="120" rx="8" fill="#fff" opacity=".6"/><circle cx="335" cy="100" r="18" fill="#ffd27a" opacity=".8"/></svg></div>';
+  }
+
+  function renderParent() {
+    var st = state(), c = parentEl; c.innerHTML = '';
+    status(c, timeOf(st), '大安區 · 4G');
+    if (st === 'idle') {
+      head(c, '急托需求', '<span class="chip">保障會員</span>');
+      var b = el('div', 'body');
+      b.innerHTML = '<div class="card hot"><label class="label" for="need">用一句話說就好</label><textarea id="need">' + S.text + '</textarea></div>' +
+        '<div class="samples">' + SAMPLES.map(function (s, i) { return '<button type="button" data-i="' + i + '">' + ['發燒', '腸胃炎', '雙胞胎'][i] + '</button>'; }).join('') + '</div>' +
+        '<button class="big accent" id="send">發出需求</button>' +
+        '<div class="card"><h3>' + CHILD.name + ' 的檔案已預存</h3><div class="hint">' + CHILD.age + ' · ' + CHILD.weight + ' · 過敏 ' + CHILD.allergy + '。派單時會自動附給保母。</div></div>';
+      c.appendChild(b);
+      b.querySelectorAll('.samples button').forEach(function (btn) { btn.addEventListener('click', function () { S.text = SAMPLES[+btn.getAttribute('data-i')]; b.querySelector('#need').value = S.text; }); });
+      b.querySelector('#need').addEventListener('input', function (e) { S.text = e.target.value; });
+      b.querySelector('#send').addEventListener('click', next);
+      return;
+    }
+    if (st === 'parsed') {
+      head(c, '確認需求', '<span class="chip brand">AI 已整理</span>');
+      var b1 = el('div', 'body');
+      b1.innerHTML = '<div class="card"><div class="hint" style="margin-bottom:8px">你說：「' + S.text + '」</div>' + parsedGrid(true) + '<div class="hint" style="margin-top:8px">虛線框是 AI 抽出的欄位，點一下可以改。</div></div>' +
+        '<button class="big brand" id="confirm">確認，開始派單</button><button class="big ghost">修改</button>';
+      c.appendChild(b1);
+      b1.querySelector('#confirm').addEventListener('click', next);
+      return;
+    }
+    if (st === 'pushed' || st === 'expanded') {
+      var exp = st === 'expanded';
+      head(c, exp ? '擴大範圍中' : '派單中', '<span class="chip ' + (exp ? 'warn' : '') + '">' + (exp ? '已升級加急' : '加急單') + '</span>');
+      var b2 = el('div', 'body');
+      b2.innerHTML = '<div class="cd' + (exp ? ' alarm' : '') + '"><span>' + (exp ? '第二輪推播 · 已擴大到中正、信義區' : '30 分鐘回應承諾') + '</span><b id="cd">' + (exp ? '30:00' : '30:00') + '</b></div>' +
+        '<div class="card hot"><h3>' + (exp ? '已推播 8 位待命保母' : '已推播 5 位待命保母') + '</h3><div class="k" style="margin-bottom:6px">排序依據：距離與到達時間、證照與年齡層經驗、信任分數、是否服務過你家</div>' +
+        CANDS.map(function (x) { return candRow(x); }).join('') + (exp ? '<div class="hint" style="margin-top:6px">加上中正區 2 位、信義區 1 位</div>' : '') + '</div>' +
+        '<div class="steps"><div class="st on"><i></i>AI 整理需求</div><div class="st on"><i></i>排序並推播</div><div class="st live"><i></i>等待保母接單</div></div>';
+      c.appendChild(b2);
+      startCountdown(exp);
+      return;
+    }
+    if (st === 'accepted') {
+      head(c, '配對成功', '<span class="chip good">' + (expanded() ? '4 分鐘接單' : '4 分鐘接單') + '</span>');
+      var b3 = el('div', 'body');
+      b3.innerHTML = matchCard() + '<div class="card"><h3>保母已收到 ' + CHILD.name + ' 的檔案</h3><div class="hint">' + CHILD.med + ' · ' + CHILD.sleep + ' · ' + CHILD.rule + '</div></div>' +
+        '<div class="steps"><div class="st on"><i></i>AI 整理需求</div><div class="st on"><i></i>排序並推播</div><div class="st on"><i></i>林雅婷接單並出發</div><div class="st"><i></i>服務進行</div></div>';
+      c.appendChild(b3);
+      return;
+    }
+    if (st === 'service') {
+      head(c, '服務中', '<span class="chip good">透明托育</span>');
+      var b4 = el('div', 'body');
+      b4.innerHTML = liveScene() + '<div class="card"><div class="meta"><span>開始 <b>' + timeOf('service') + '</b></span><span>預計結束 <b>11:00</b></span><span>保母 <b>林雅婷</b></span></div></div>' +
+        '<div class="card"><h3>這段影像只有你看得到</h3><div class="hint">服務結束後保留 7 天，11/7 自動刪除。不做雲端分析。</div></div>';
+      c.appendChild(b4);
+      return;
+    }
+    if (st === 'review') {
+      head(c, '服務完成', '<span class="chip good">11:05</span>');
+      var b5 = el('div', 'body');
+      b5.innerHTML = '<div class="card"><div class="who"><span class="av lg">林</span><div><b>林雅婷</b><span>07:35 到 11:05 · 3.5 小時</span></div></div></div>' +
+        '<div class="card hot"><h3>給林雅婷評價</h3><div class="stars" id="stars">' + [1, 2, 3, 4, 5].map(function (n) { return '<button type="button" data-n="' + n + '" class="' + (n <= S.stars ? 'on' : '') + '">★</button>'; }).join('') + '</div>' +
+        '<div class="hint" style="margin-top:8px">小安醒來沒哭，退燒藥按時餵了，謝謝。</div></div>' +
+        '<div class="card"><div class="ledger"><div><span>服務費 3.5 小時 × 400</span><b>1,400</b></div><div><span>加急單佣金 20%</span><b>280</b></div><div class="tot"><span>已付（含托育責任險）</span><b>' + urgentFee().toLocaleString() + ' 元</b></div></div></div>' +
+        '<button class="big brand" id="rate">送出評價</button>';
+      c.appendChild(b5);
+      b5.querySelectorAll('#stars button').forEach(function (btn) { btn.addEventListener('click', function () { S.stars = +btn.getAttribute('data-n'); renderParent(); }); });
+      b5.querySelector('#rate').addEventListener('click', next);
+      return;
+    }
+    if (st === 'done') {
+      head(c, '已送出', '<span class="chip good">完成</span>');
+      var b6 = el('div', 'body');
+      b6.innerHTML = '<div class="done"><div class="ck">✓</div><b>評價已送出</b><div class="hint" style="margin-top:4px">林雅婷已加入你的常用保母，下次排序優先配對。</div></div>' +
+        '<div class="card"><h3>下次更快</h3><div class="hint">' + CHILD.name + ' 的檔案已更新：退燒藥 07:50 餵過一次。</div></div>' +
+        '<button class="big ghost" id="again">再發一次需求</button>';
+      c.appendChild(b6);
+      b6.querySelector('#again').addEventListener('click', reset);
+    }
+  }
+
+  // ---------- render: nanny ----------
+  function ring(score, delta) {
+    var r = 15.5, circ = 2 * Math.PI * r, v = circ * score / 100;
+    return '<div class="ring"><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="' + r + '" fill="none" stroke="var(--bg-2)" stroke-width="4"/><circle class="v" cx="18" cy="18" r="' + r + '" fill="none" stroke="var(--good)" stroke-width="4" stroke-linecap="round" stroke-dasharray="' + v.toFixed(1) + ' ' + circ.toFixed(1) + '"/></svg><b>' + score + (delta ? '<small>+' + delta + '</small>' : '') + '</b></div>';
+  }
+  function bars(up) {
+    var rows = [['證照與身分', 30, 30], ['家長評價（' + (up ? 29 : 28) + ' 則）', up ? 28 : 27, 30], ['準時率', 20, 20], ['透明托育開啟率', 10, 10], ['糾紛紀錄', 5, 10]];
+    return '<div class="bars">' + rows.map(function (r, i) { return '<div><span>' + r[0] + '</span><em class="' + (up && i === 1 ? 'up' : '') + '">' + r[1] + ' / ' + r[2] + '</em><i style="--w:' + Math.round(r[1] / r[2] * 100) + '%"></i></div>'; }).join('') + '</div>';
+  }
+  function profileCard(score, delta) {
+    return '<div class="card"><div class="who"><span class="av xl">林</span><div><b>林雅婷</b><span>保母技術士 · 大安區 · 加入 8 個月</span></div><span class="score" style="margin-left:auto"></span>' + ring(score, delta) + '</div></div>';
+  }
+  function pushCard(fee, exp) {
+    return '<div class="push"><div class="t"><b>急托需求 · ' + (exp ? '第二輪' : '0.9 km') + '</b><span class="chip">加急單</span></div>' +
+      '<div class="grid2">' + S.parsed.slice(0, 4).map(function (p) { return '<div><span>' + p[0] + '</span>' + p[1].replace('（門牌已預存）', '') + '</div>'; }).join('') + '</div>' +
+      '<div class="meta" style="margin-top:8px"><span>狀況 <b>' + S.parsed[4][1] + '</b></span><span class="fee">' + fee.toLocaleString() + '<small> 元 · 含加急獎金</small></span></div>' +
+      '<div class="row2" style="margin-top:10px"><button class="big accent" id="accept">接單</button><button class="big ghost" id="skip">略過</button></div>' +
+      '<div class="acc"><span>同時推播給 ' + (exp ? 8 : 5) + ' 位，先接先得</span><b class="num" id="acc-cd">90 秒</b></div></div>';
+  }
+  function renderNanny() {
+    var st = state(), c = nannyEl; c.innerHTML = '';
+    status(c, timeOf(st), '待命中 · 7–12');
+    if (st === 'idle' || st === 'parsed') {
+      head(c, '今天待命', '<span class="chip good">待命中</span>');
+      var b = el('div', 'body');
+      b.innerHTML = profileCard(92) + '<div class="card"><h3>這週的待命時段</h3><div class="shift"><span></span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>7–12</span><i class="now"></i><i></i><i class="on"></i><i class="on"></i><i></i><span>12–17</span><i></i><i class="on"></i><i></i><i></i><i></i><span>17–21</span><i></i><i></i><i></i><i class="on"></i><i></i></div>' +
+        '<div class="meta" style="margin-top:10px"><span>5 個時段 · 待命獎金 <b>250 元</b></span><span>本週接單 <b>3 次</b></span></div></div>' +
+        '<div class="card"><h3>目前</h3><div class="hint">待命中，位置：大安區和平東路二段。有急單會推播到這裡。</div></div>';
+      c.appendChild(b);
+      return;
+    }
+    if (st === 'pushed' || st === 'expanded') {
+      var exp = st === 'expanded';
+      head(c, '新的急單', '<span class="chip">' + (exp ? '加急 · 第二輪' : '推播') + '</span>');
+      var b1 = el('div', 'body');
+      b1.innerHTML = pushCard(FEE.base + FEE.bonus, exp) + '<div class="card"><h3>' + CHILD.name + ' 的檔案（接單後完整顯示）</h3><div class="hint">' + CHILD.age + ' · 過敏 ' + CHILD.allergy + ' · 曾服務 2 次</div></div>';
+      c.appendChild(b1);
+      b1.querySelector('#accept').addEventListener('click', function () { if (S.noone && st === 'pushed') { /* in no-one mode the first round times out */ next(); } else { next(); } });
+      b1.querySelector('#skip').addEventListener('click', function () { if (S.noone && st === 'pushed') next(); });
+      startAcceptCountdown(b1.querySelector('#acc-cd'), exp);
+      return;
+    }
+    if (st === 'accepted') {
+      head(c, '前往中', '<span class="chip good">已接單</span>');
+      var b2 = el('div', 'body');
+      b2.innerHTML = '<div class="card good"><div class="meta"><span>目的地 <b>信義路四段</b></span><span>預估 <b>' + (expanded() ? '23 分' : '23 分') + '</b></span><span>到達 <b>' + timeOf('service') + '</b></span></div><div class="hint" style="margin-top:6px">門牌與門禁密碼已解鎖顯示，服務結束後自動隱藏。</div></div>' +
+        '<div class="card"><h3>' + CHILD.name + ' · ' + CHILD.age + '</h3><div class="grid2"><div><span>體重</span>' + CHILD.weight + '</div><div><span>過敏</span>' + CHILD.allergy + '</div><div><span>常備藥</span>' + CHILD.med + '</div><div><span>睡眠</span>' + CHILD.sleep + '</div><div><span>家規</span>' + CHILD.rule + '</div><div><span>狀況</span>' + S.parsed[4][1] + '</div></div></div>' +
+        '<div class="card"><div class="ledger"><div><span>本單服務費</span><b>1,400</b></div><div><span>加急獎金</span><b>+100</b></div><div class="tot"><span>預計實收</span><b>1,500 元</b></div></div></div>';
+      c.appendChild(b2);
+      return;
+    }
+    if (st === 'service') {
+      head(c, '服務中', '<span class="chip good">' + timeOf('service') + ' 開始</span>');
+      var b3 = el('div', 'body');
+      b3.innerHTML = '<div class="card good"><div class="toggle"><div><b>透明托育</b><div class="hint">只有小潔看得到，7 天後自動刪除</div></div><span class="sw"></span></div></div>' +
+        '<div class="card"><h3>照護紀錄</h3><div class="ledger"><div><span>07:50 餵退燒藥水 5 ml</span><b>已記</b></div><div><span>08:20 量體溫 37.9</span><b>已記</b></div><div><span>09:00 午睡（抱小被子）</span><b>已記</b></div></div><div class="hint" style="margin-top:6px">紀錄會在服務結束後回寫到 ' + CHILD.name + ' 的檔案。</div></div>' +
+        '<div class="card"><div class="meta"><span>已服務 <b>2 小時 06 分</b></span><span>預計結束 <b>11:00</b></span></div></div>';
+      c.appendChild(b3);
+      return;
+    }
+    if (st === 'review') {
+      head(c, '服務完成', '<span class="chip good">11:05</span>');
+      var b4 = el('div', 'body');
+      b4.innerHTML = '<div class="card good"><h3>本單收入</h3><div class="ledger"><div><span>服務費 3.5 小時 × 400</span><b>1,400</b></div><div><span>加急獎金</span><b>+100</b></div><div class="tot"><span>實收（平台不從你這邊抽）</span><b>1,500 元</b></div></div></div>' +
+        profileCard(92) + '<div class="card"><div class="hint">等待小潔評價中。評價送出後信任分數會重新計算。</div></div>';
+      c.appendChild(b4);
+      return;
+    }
+    if (st === 'done') {
+      head(c, '信任分數更新', '<span class="chip good">+1</span>');
+      var b5 = el('div', 'body');
+      var up = S.stars >= 4;
+      b5.innerHTML = profileCard(up ? 93 : 92, up ? 1 : 0) + '<div class="card">' + bars(up) + '</div>' +
+        '<div class="card good"><h3>' + (up ? '小潔給了 ' + S.stars + ' 顆星' : '小潔給了 ' + S.stars + ' 顆星') + '</h3><div class="hint">' + (up ? '家長評價 27 變 28，總分 92 變 93。下一次大安區急單，排序會把你往前放。' : '這次沒有加分。分數每次服務後重新計算。') + '</div></div>';
+      c.appendChild(b5);
+    }
+  }
+
+  // ---------- render: engine ----------
+  function eventsFor() {
+    var f = flow(), list = [], exp = S.noone;
+    var E = {
+      idle: ['07:02', '待命池：大安區 23 位保母標記 7–12 待命', '急托保障會員 1 位在線'],
+      parsed: ['07:05', '收到需求，語言模型抽出 6 個欄位', '示範資料：規則式抽取，正式版接 LLM API'],
+      pushed: ['07:05', '篩選：證照 ✓ 、2 歲經驗 ✓ 、待命 ✓ → 剩 11 位', '排序：距離/到達、證照經驗、信任分數、曾服務；同時推播前 5 位，先接先得'],
+      expanded: ['07:35', '30 分鐘無人接單 → 擴大到中正、信義區，升級加急', '重新推播 8 位；保母加急獎金維持 100 元，家長費用不變'],
+      accepted: [exp ? '07:39' : '07:09', '林雅婷接單（4 分鐘）；其餘推播撤回', '門牌、門禁、孩子檔案解鎖給接單者；托育責任險生效'],
+      service: [exp ? '08:02' : '07:35', '到達；透明托育開啟（保母自選）', '影像只給本次家長，7 天後刪除，不做雲端分析'],
+      review: ['11:05', '服務結束。家長付 1,680、保母實收 1,500、平台 180', '佣金 280 中 100 元轉為保母加急獎金'],
+      done: ['11:06', '評價回寫：信任分數 92 → 93', '林雅婷進入小潔的常用保母名單；下次排序生效']
+    };
+    for (var i = 0; i <= S.step; i++) list.push({ name: f[i], e: E[f[i]], cur: i === S.step });
+    return list;
+  }
+  function renderEngine() {
+    var f = flow();
+    $('progress').innerHTML = f.slice(1).map(function (n, i) { var idx = i + 1; return '<i class="' + (idx < S.step ? 'on' : idx === S.step ? 'cur' : '') + '"></i>'; }).join('');
+    $('progress').style.gridTemplateColumns = 'repeat(' + (f.length - 1) + ', 1fr)';
+    $('stepno').textContent = S.step + ' / ' + (f.length - 1);
+    $('stepname').textContent = NAMES[state()];
+    $('eng-time').textContent = timeOf(state());
+    eventsEl.innerHTML = eventsFor().map(function (x) { return '<div class="ev' + (x.cur ? ' cur' : '') + '"><time>' + x.e[0] + '</time><div><p>' + x.e[1] + '</p><small>' + x.e[2] + '</small></div></div>'; }).join('');
+    eventsEl.scrollTop = eventsEl.scrollHeight;
+    $('prev').disabled = S.step === 0;
+    $('next').disabled = S.step === f.length - 1;
+  }
+
+  // ---------- countdowns (demo speed) ----------
+  function stopTimers() { if (cdTimer) { clearInterval(cdTimer); cdTimer = null; } }
+  function startCountdown(exp) {
+    stopTimers();
+    var cdEl = parentEl.querySelector('#cd'); if (!cdEl) return;
+    var left = 30 * 60, t0 = Date.now(), speed = S.noone && !exp ? 120 : 20; // no-one mode: first round burns down fast
+    cdTimer = setInterval(function () {
+      var l = Math.max(0, left - Math.floor((Date.now() - t0) / 1000) * speed);
+      cdEl.textContent = String(Math.floor(l / 60)).padStart(2, '0') + ':' + String(l % 60).padStart(2, '0');
+      if (l === 0) { clearInterval(cdTimer); cdTimer = null; if (S.noone && !exp && state() === 'pushed') next(); }
+    }, 200);
+  }
+  function startAcceptCountdown(elm, exp) {
+    if (!elm) return;
+    var left = 90, t0 = Date.now();
+    var t = setInterval(function () {
+      if (!document.body.contains(elm)) { clearInterval(t); return; }
+      var l = Math.max(0, left - Math.floor((Date.now() - t0) / 1000) * (S.noone && !exp ? 6 : 1));
+      elm.textContent = l + ' 秒';
+      if (l === 0) clearInterval(t);
+    }, 250);
+  }
+
+  // ---------- navigation ----------
+  function render() { renderParent(); renderNanny(); renderEngine(); }
+  function next() {
+    if (S.step >= flow().length - 1) return;
+    if (state() === 'idle') { S.text = (parentEl.querySelector('#need') || { value: S.text }).value.trim() || SAMPLES[0]; S.parsed = parse(S.text); }
+    S.step++; stopTimers(); render();
+  }
+  function prev() { if (S.step === 0) return; S.step--; stopTimers(); render(); }
+  function reset() { S.step = 0; S.stars = 5; stopAuto(); stopTimers(); render(); }
+  function stopAuto() { if (S.auto) { clearInterval(S.auto); S.auto = null; $('auto').textContent = '自動播放'; } }
+  function toggleAuto() {
+    if (S.auto) { stopAuto(); return; }
+    if (S.step >= flow().length - 1) S.step = 0;
+    $('auto').textContent = '停止自動';
+    render();
+    S.auto = setInterval(function () { if (S.step >= flow().length - 1) { stopAuto(); return; } if (S.noone && state() === 'pushed') return; next(); }, 3000);
+  }
+
+  $('next').addEventListener('click', next);
+  $('prev').addEventListener('click', prev);
+  $('reset').addEventListener('click', reset);
+  $('auto').addEventListener('click', toggleAuto);
+  $('noone').addEventListener('change', function (e) {
+    S.noone = e.target.checked;
+    // keep the same named state when the flow changes length
+    var name = state(); S.step = Math.max(0, flow().indexOf(name)); if (S.step < 0) S.step = 0;
+    stopTimers(); render();
+  });
+  document.addEventListener('keydown', function (e) {
+    var tag = (e.target && e.target.tagName) || '';
+    if (tag === 'TEXTAREA' || tag === 'INPUT') { if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); next(); } return; }
+    if (e.key === ' ' || e.key === 'ArrowRight') { e.preventDefault(); next(); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
+    else if (e.key === 'r' || e.key === 'R') { reset(); }
+  });
+
+  S.parsed = parse(S.text);
+  // #s3 in the link opens at step 3 (presenter shortcut; no state beyond the step number)
+  var m = /^#s(\d)$/.exec(location.hash || '');
+  if (m) S.step = Math.min(+m[1], flow().length - 1);
+  render();
+})();
+</script>
